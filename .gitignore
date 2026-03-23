@@ -1,0 +1,48 @@
+# macOS
+.DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 가상환경
+venv/
+env/
+ENV/
+.venv/
+
+# 환경변수
+.env
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# VSCode
+.vscode/
+
+# PyCharm
+.idea/
+
+# 로그 파일
+*.log
+
+# 테스트 / 커버리지
+.coverage
+htmlcov/
+.pytest_cache/
+
+# 패키지 빌드
+dist/
+build/
+*.egg-info/
+
+# 기타
+*.sqlite3
+*.db
+
+# GitHub 관련
+*.pem
+
+# OS / 기타
+Thumbs.db
