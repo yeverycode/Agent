@@ -5,6 +5,10 @@ from typing import Any, Dict
 
 from google import genai
 
+from agents.prompts.analyst_prompt import (
+    ANALYST_INSTRUCTION,
+    ANALYST_INPUT_PROMPT_TEMPLATE,
+)
 from tools.parser import (
     build_analysis_context,
     extract_structure_hints,
@@ -13,49 +17,18 @@ from tools.parser import (
 )
 
 
-ANALYST_INSTRUCTION = """
-너는 GitHub 프로젝트를 분석해 취업 준비생이 자신의 프로젝트를 설명할 수 있도록 돕는 분석가다.
-
-입력으로 저장소 파일 트리와 핵심 파일 내용이 주어진다.
-이 정보를 바탕으로 프로젝트의 목적, 디렉토리 구조, 주요 기능, 핵심 파일 역할을 한국어로 설명하라.
-
-반드시 아래 원칙을 지켜라:
-1. README만 믿지 말고 파일명, 디렉토리 구조, 코드 내용도 함께 근거로 사용하라.
-2. 확인 가능한 사실과 추정은 구분하라.
-3. 과장된 마케팅 문구 대신 실제 프로젝트 설명처럼 작성하라.
-4. 취업 준비생이 면접이나 포트폴리오에서 활용할 수 있도록 명확하게 써라.
-5. 확실하지 않은 내용은 '추정'이라고 표시하라.
-
-반드시 아래 JSON 형식으로만 응답하라:
-
-{
-    "project_overview": "프로젝트 개요",
-    "directory_structure": "디렉토리 구조 설명",
-    "key_features": "주요 기능 설명",
-    "key_files": "핵심 파일 역할 설명",
-    "execution_flow": "핵심 실행 흐름 또는 사용자 흐름",
-    "uncertain_points": "불확실하거나 추가 확인이 필요한 부분"
-}
-""".strip()
-
-
 class AnalystAgent:
-    def __init__(self, api_key: str | None = None, model: str = "gemini-2.5-flash"):
+    def __init__(self, api_key: str, model: str = "gemini-2.5-flash"):
         self.model = model
-        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
+        self.api_key = api_key
+
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY가 설정되어 있지 않습니다.")
 
         self.client = genai.Client(api_key=self.api_key)
 
     def _generate_analysis(self, context: str) -> str:
-        prompt = f"""
-다음은 GitHub 프로젝트 분석을 위한 입력 데이터다.
-
-{context}
-
-위 정보를 바탕으로 JSON만 출력하라.
-""".strip()
+        prompt = ANALYST_INPUT_PROMPT_TEMPLATE.format(context=context)
 
         response = self.client.models.generate_content(
             model=self.model,
