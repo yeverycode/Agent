@@ -17,16 +17,16 @@ from tools.parser import select_candidate_files
 from agents.prompts.repo_manager_prompt import REPO_MANAGER_PROMPT_TEMPLATE
 
 class RepoManagerAgent:
-    def __init__(self, model: str = "gemini-2.5-flash"):
-        self.token = os.getenv("MY_GITHUB_TOKEN")
-        self.api_key = os.getenv("GEMINI_API_KEY")
+    def __init__(self, token: str | None = None, api_key: str | None = None, model: str = "gemini-2.5-flash"):
+        self.token = token or os.getenv("MY_GITHUB_TOKEN")
+        self.api_key = api_key or os.getenv("GEMINI_API_KEY")
         self.model = model
-        
+
         if not self.token:
             raise ValueError("MY_GITHUB_TOKEN이 .env 파일에 설정되어 있지 않습니다.")
         if not self.api_key:
             raise ValueError("GEMINI_API_KEY가 .env 파일에 설정되어 있지 않습니다.")
-            
+
         self.client = genai.Client(api_key=self.api_key)
 
     def _select_files_with_llm(self, tree_paths: list[str], max_files: int = 8) -> list[str]:
@@ -52,6 +52,8 @@ class RepoManagerAgent:
                 model=self.model,
                 contents=prompt
             )
+            
+            result_text = response.text
             
             if "```json" in result_text:
                 result_text = result_text.split("```json")[1].split("```")[0].strip()

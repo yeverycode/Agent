@@ -41,6 +41,10 @@ build/
 *.sqlite3
 *.db
 
+# Generated outputs
+outputs/
+adk_agents/outputs/
+
 # GitHub 관련
 *.pem
 
