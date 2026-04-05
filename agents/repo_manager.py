@@ -53,6 +53,8 @@ class RepoManagerAgent:
                 contents=prompt
             )
             
+            result_text = response.text
+            
             if "```json" in result_text:
                 result_text = result_text.split("```json")[1].split("```")[0].strip()
             elif "```" in result_text:
