@@ -18,7 +18,7 @@ def main():
         print("필수 API 키가 설정되지 않았습니다. .env 파일을 확인하세요.")
         return
         
-    TARGET_REPO = "YourGitHubID/YourRepoName" # 분석 레포 설정
+    TARGET_REPO = "yeverycode/liar-game" # 분석 레포 설정
     MODEL = "gemini-2.5-flash"
 
     print(f"[README 생성 에이전트] '{TARGET_REPO}' 분석을 시작합니다.\n")
@@ -39,7 +39,16 @@ def main():
         analysis_res = analyst.run(repo_data)
         
         # 분석 결과(JSON 문자열)를 파이썬 객체로 변환
-        analysis_json = json.loads(analysis_res.get("analysis_result", "{}"))
+        analysis_raw = analysis_res.get("analysis_result", "")
+        if not analysis_raw:
+            print("⚠️ 분석 결과가 비어 있습니다. 기본값으로 진행합니다.")
+            analysis_json = {}
+        else:
+            try:
+                analysis_json = json.loads(analysis_raw)
+            except json.JSONDecodeError:
+                print("⚠️ 분석 결과 JSON 파싱에 실패했습니다. 기본값으로 진행합니다.")
+                analysis_json = {}
 
         # TechExpert (서영)
         print("[Step 3] 기술 스택 추출 및 Mermaid 도식화 생성 중...")
