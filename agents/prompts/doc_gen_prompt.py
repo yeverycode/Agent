@@ -93,23 +93,42 @@ def build_prompt_from_project_data(project_data: Dict, mode: str = "portfolio") 
     mermaid_code = tech.get("mermaid_code", "")
     key_points = tech.get("key_points", [])
 
-    directory_text = "\n".join(f"- {item}" for item in directory_explanation) or "- 정보 없음"
-    feature_text = "\n".join(f"- {item}" for item in main_features) or "- 정보 없음"
-    key_files_text = "\n".join(
-        f"- `{item['path']}`: {item['role']}" for item in key_files
-    ) or "- 정보 없음"
+    def format_list_or_str(data):
+        if isinstance(data, list):
+            return "\n".join(f"- {item}" for item in data) if data else "- 정보 없음"
+        elif isinstance(data, str):
+            return data
+        return "- 정보 없음"
+
+    directory_text = format_list_or_str(directory_explanation)
+    feature_text = format_list_or_str(main_features)
+    key_points_text = format_list_or_str(key_points)
+    uncertain_text = format_list_or_str(uncertain_points)
+
+    if isinstance(key_files, list) and len(key_files) > 0 and isinstance(key_files[0], dict):
+        key_files_text = "\n".join(
+            f"- `{item.get('path', 'Unknown')}`: {item.get('role', '')}" for item in key_files
+        )
+    elif isinstance(key_files, dict):
+        key_files_text = "\n".join(f"- `{k}`: {v}" for k, v in key_files.items())
+    elif isinstance(key_files, list):
+        key_files_text = "\n".join(f"- {item}" for item in key_files)
+    elif isinstance(key_files, str):
+        key_files_text = key_files
+    else:
+        key_files_text = "- 정보 없음"
 
     tech_lines = []
-    for category, values in tech_stack.items():
-        if isinstance(values, list):
-            joined = ", ".join(values) if values else "-"
-            tech_lines.append(f"- {category}: {joined}")
-        else:
-            tech_lines.append(f"- {category}: {values}")
-    tech_text = "\n".join(tech_lines) or "- 정보 없음"
-
-    key_points_text = "\n".join(f"- {item}" for item in key_points) or "- 정보 없음"
-    uncertain_text = "\n".join(f"- {item}" for item in uncertain_points) or "- 없음"
+    if isinstance(tech_stack, dict):
+        for category, values in tech_stack.items():
+            if isinstance(values, list):
+                joined = ", ".join(values) if values else "-"
+                tech_lines.append(f"- {category}: {joined}")
+            else:
+                tech_lines.append(f"- {category}: {values}")
+        tech_text = "\n".join(tech_lines) or "- 정보 없음"
+    else:
+        tech_text = "- 정보 없음"
 
     tone = {
         "portfolio": "면접과 포트폴리오 제출에 적합한 README로 작성하세요.",

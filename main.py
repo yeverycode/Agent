@@ -18,7 +18,7 @@ def main():
         print("필수 API 키가 설정되지 않았습니다. .env 파일을 확인하세요.")
         return
         
-    TARGET_REPO = "yeverycode/liar-game" # 분석 레포 설정
+    TARGET_REPO = "tishakong/SMWU_CG_LAB01" # 분석 레포 설정
     MODEL = "gemini-2.5-flash"
 
     print(f"[README 생성 에이전트] '{TARGET_REPO}' 분석을 시작합니다.\n")
@@ -30,57 +30,76 @@ def main():
         tech_exp = TechExpertAgent(api_key=gemini_api_key, model=MODEL)
         writer = WriterAgent(api_key=gemini_api_key, model=MODEL, mode="portfolio")
 
-        # RepoManager (하늘)
-        print("[Step 1] GitHub에서 핵심 파일 추출 중...")
-        repo_data = repo_mgr.extract_project_data(TARGET_REPO)
+        # ---------------------------------------------------------
+        # Step 1: RepoManager - 데이터 추출
+        # ---------------------------------------------------------
+        # 전체 트리 구조 파악 및 핵심 파일 내용 수집
+        project_data = repo_mgr.extract_project_data(TARGET_REPO)
+        if project_data.get("status") == "fail":
+            print(f"❌ 데이터 추출 실패: {project_data.get('error')}")
+            return
+
+        # ---------------------------------------------------------
+        # Step 2: Analyst - 프로젝트 구조 및 기능 분석
+        # ---------------------------------------------------------
+        print("\n🔍 Analyst 에이전트가 프로젝트를 분석 중입니다...")
+        analyst_output = analyst.run(project_data)
         
-        # Analyst (유민)
-        print("[Step 2] 프로젝트 구조 및 기능 분석 중...")
-        analysis_res = analyst.run(repo_data)
+        # 분석 결과(JSON 문자열)를 파싱하여 데이터 객체에 저장
+        try:
+            # Analyst가 반환한 raw_analysis(JSON string)를 dict로 변환
+            raw_analysis_str = analyst_output.get("analysis_result", "{}")
+            # JSON 코드 블록 기호(```json ... ```) 제거 로직 포함
+            if "```json" in raw_analysis_str:
+                raw_analysis_str = raw_analysis_str.split("```json")[1].split("```")[0].strip()
+            
+            analysis_dict = json.loads(raw_analysis_str)
+            project_data["analysis_summary"] = analysis_dict
+        except Exception as e:
+            print(f"⚠️ 분석 결과 파싱 중 오류 발생: {e}")
+            project_data["analysis_summary"] = {}
+
+        # ---------------------------------------------------------
+        # Step 3: TechExpert - 기술 스택 및 아키텍처 분석
+        # ---------------------------------------------------------
+        print("\n💻 TechExpert 에이전트가 기술 스택을 정리 중입니다...")
+        tech_output = tech_exp.run(analyst_output)
         
-        # 분석 결과(JSON 문자열)를 파이썬 객체로 변환
-        analysis_raw = analysis_res.get("analysis_result", "")
-        if not analysis_raw:
-            print("⚠️ 분석 결과가 비어 있습니다. 기본값으로 진행합니다.")
-            analysis_json = {}
+        if tech_output.get("status") == "success":
+            project_data["tech_summary"] = tech_output.get("tech_summary")
         else:
-            try:
-                analysis_json = json.loads(analysis_raw)
-            except json.JSONDecodeError:
-                print("⚠️ 분석 결과 JSON 파싱에 실패했습니다. 기본값으로 진행합니다.")
-                analysis_json = {}
+            print(f"⚠️ 기술 분석 실패: {tech_output.get('error')}")
+            project_data["tech_summary"] = {}
 
-        # TechExpert (서영)
-        print("[Step 3] 기술 스택 추출 및 Mermaid 도식화 생성 중...")
-        tech_res = tech_exp.run(analysis_res) 
-        tech_data = tech_res.get("tech_summary", {})
-
-        # Writer (예인)
-        print("[Step 4] 모든 데이터를 취합하여 최종 README 생성 중...")
-        # 에이전트 간 데이터 규격 매핑
-        combined_context = {
-            "project_name": repo_data["repo_name"].split("/")[-1],
-            "repo_url": repo_data["repo_url"],
-            "analysis_summary": {
-                "one_line_summary": analysis_json.get("project_overview"),
-                "directory_explanation": [analysis_json.get("directory_structure")],
-                "main_features": [analysis_json.get("key_features")],
-                "key_files": [{"path": "Core Logic", "role": analysis_json.get("key_files")}],
-                "uncertain_points": [analysis_json.get("uncertain_points")]
-            },
-            "tech_summary": tech_data
-        }
+        # ---------------------------------------------------------
+        # Step 4: Writer - README 생성
+        # ---------------------------------------------------------
+        print("\n✍️ Writer 에이전트가 README 초안을 작성하고 있습니다...")
+        writer_output = writer.run(project_data)
         
-        final_readme = writer.run(combined_context)
+        if writer_output.get("status") == "success":
+            final_readme = writer_output.get("readme_markdown")
+            print(f"✅ README 생성 완료! 로컬 저장 경로: {writer_output.get('saved_path')}")
+        else:
+            print("❌ README 생성 실패")
+            return
 
-        # 결과 출력
-        if final_readme.get("status") == "success":
-            print(f"\n 성공! README가 생성되었습니다.")
-            print(f"파일 위치: {final_readme.get('saved_path')}")
-            print(f"체크리스트: {final_readme.get('section_check')}")
+        # ---------------------------------------------------------
+        # Step 5: RepoManager - PR 생성 및 게시
+        # ---------------------------------------------------------
+        print("\n📤 깃허브에 Pull Request를 생성합니다...")
+        publish_result = repo_mgr.publish_readme(TARGET_REPO, final_readme)
+        
+        if publish_result.get("status") == "success":
+            print("\n" + "="*50)
+            print("🎉 모든 작업이 완료되었습니다!")
+            print(f"👉 생성된 PR 확인하기: {publish_result.get('pr_url')}")
+            print("="*50)
+        else:
+            print(f"❌ PR 생성 실패: {publish_result.get('error')}")
 
     except Exception as e:
-        print(f"\n 실행 중 오류 발생: {e}")
+        print(f"\n❌ 실행 중 예상치 못한 에러 발생: {e}")
 
 if __name__ == "__main__":
     main()
