@@ -61,10 +61,11 @@ def create_readme_pr(repo: Repository, readme_content: str) -> str:
     except:
         repo.create_file("README.md", commit_message, readme_content, branch=new_branch_name)
 
+    # 타겟 레포의 소유자를 멘션해서 알림을 주는 용도
+    owner_id = repo.owner.login
+
     pr_title = "[AI] Docs: README.md 생성 및 업데이트"
-    pr_body = """
-    AI 에이전트 작업 보고서
-    """
+    pr_body = f"""@{owner_id}"""
     
     pr = repo.create_pull(
         title=pr_title, body=pr_body, 
