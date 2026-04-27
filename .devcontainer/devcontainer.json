@@ -1,0 +1,32 @@
+{
+  "name": "AI Agent Hands-on",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  
+  "postCreateCommand": "pip install -r requirements.txt",
+
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "pwsh",
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "editor.formatOnSave": true
+      },
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-ceintl.vscode-language-pack-ko", // 한국어 팩
+        "tamasfe.even-better-toml",
+        "njpwerner.autodocstring",
+        "christian-kohler.path-intellisense"
+      ]
+    }
+  },
+
+  "features": {
+    "ghcr.io/devcontainers/features/powershell:1": {}
+  },
+
+  "forwardPorts": [8000],
+
+  "remoteUser": "vscode"
+}
